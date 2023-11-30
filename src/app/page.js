@@ -57,7 +57,7 @@ export default function SignIn() {
       dob: data.get('dob'),
       
     });
-    runDBCallAsync(`http://localhost:3000/api/register?email=${data.get('email')}&pass=${data.get('password')}&dob=${data.get('dob')}`)
+    runDBCallAsync(`api/register?email=${data.get('email')}&pass=${data.get('password')}&dob=${data.get('dob')}`)
     };
 
   // Render the component only when the theme is available
@@ -118,7 +118,7 @@ export default function SignIn() {
             </Button>
             <Grid container>
               <Grid item>
-                <Link href="http://localhost:3000/register" variant="body2">
+                <Link href="/register" variant="body2">
                   {"Don't have an account? Sign Up"}
                 </Link>
               </Grid>

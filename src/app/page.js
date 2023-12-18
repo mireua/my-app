@@ -15,6 +15,14 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import { serialize } from 'cookie';
+
+const theme = createTheme();
 
 function Copyright(props) {
   return (
@@ -22,7 +30,8 @@ function Copyright(props) {
       {'Copyright © '}
       <Link color="inherit" href="https://mui.com/">
         Your Website
-      </Link>{' '}
+      </Link>
+      {' '}
       {new Date().getFullYear()}
       {'.'}
     </Typography>
@@ -30,43 +39,112 @@ function Copyright(props) {
 }
 
 async function runDBCallAsync(url) {
-  const res = await fetch(url);
-  const data = await res.json();
-  if(data.data== "valid"){
-  console.log("login is valid!")
-  } else {
-  console.log("not valid ")
+  try {
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      // Handle non-OK response (e.g., HTTP error)
+      throw new Error(`HTTP error! Status: ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (data.data === "valid") {
+      return { status: "authenticated" };
+    } else {
+      return { status: "failed" };
+    }
+  } catch (error) {
+    // Handle other errors, including network errors
+    console.error("Error fetching data:", error);
+    return { status: "error" };
   }
-  }
-  
+}
 
 export default function SignIn() {
-  const [theme, setTheme] = React.useState(null);
+  const [open, setOpen] = React.useState(false);
+  const [errorHolder, setErrorHolder] = React.useState('');
 
-  useEffect(() => {
-    // Create the theme only on the client side
-    setTheme(createTheme());
-  }, []); // Empty dependency array ensures this effect runs only once
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  const validateForm = (event) => {
+    let errorMessage = '';
     const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
-      dob: data.get('dob'),
-      
-    });
-    runDBCallAsync(`api/register?email=${data.get('email')}&pass=${data.get('password')}&dob=${data.get('dob')}`)
-    };
+    let email = data.get('email');
+    let pass = data.get('password');
 
-  // Render the component only when the theme is available
-  if (!theme) {
-    return null;
+    var validator = require("email-validator");
+    let emailCheck = validator.validate(email);
+
+    if (!emailCheck) {
+      errorMessage += 'Incorrect email';
+    }
+
+    if (pass.length === 0) {
+      errorMessage += ' No password added';
+    }
+
+    return errorMessage;
   }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    let errorMessage = validateForm(event);
+    setErrorHolder(errorMessage);
+
+    if (errorMessage.length > 0) {
+      setOpen(true);
+    } else {
+      const data = new FormData(event.currentTarget);
+      let email = data.get('email');
+      let pass = data.get('password');
+
+      const response = await runDBCallAsync(`api/login?email=${email}&pass=${pass}`);
+
+      if (response.status === "authenticated") {
+        // Set the 'auth' cookie to 'true' if login is successful
+        const serializedCookie = serialize('auth', 'true', {
+          path: '/', // Set the appropriate path
+          maxAge: 60 * 60 * 24, // 1 day in seconds
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production', // Set secure to true in production
+          sameSite: 'strict',
+        });
+
+        // Set the cookie
+        document.cookie = serializedCookie;
+
+        window.location.href = '/dashboard';
+      }
+    }
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   return (
     <ThemeProvider theme={theme}>
+      <React.Fragment>
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">
+            {"Error"}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              {errorHolder}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose} autoFocus>
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </React.Fragment>
       <Container component="main" maxWidth="xs">
         <CssBaseline />
         <Box

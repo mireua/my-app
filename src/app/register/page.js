@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // Import useState
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -15,6 +15,13 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+
+const theme = createTheme(); // Define the theme at the top level
 
 function Copyright(props) {
   return (
@@ -22,7 +29,8 @@ function Copyright(props) {
       {'Copyright © '}
       <Link color="inherit" href="https://mui.com/">
         Your Website
-      </Link>{' '}
+      </Link>
+      {' '}
       {new Date().getFullYear()}
       {'.'}
     </Typography>
@@ -30,43 +38,90 @@ function Copyright(props) {
 }
 
 async function runDBCallAsync(url) {
-    const res = await fetch(url);
-    const data = await res.json();
-    if(data.data== "true"){
-    console.log("registered")
-    } else {
-    console.log("not registered ")
-    }
-    }
-  
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.data === "true") {
+    console.log("registered");
+  } else {
+    console.log("not registered ");
+  }
+}
 
-export default function SignIn() {
-  const [theme, setTheme] = React.useState(null);
+export default function Register() {
+  const [open, setOpen] = React.useState(false);
+  const [errorHolder, setErrorHolder] = React.useState('');
 
-  useEffect(() => {
-    // Create the theme only on the client side
-    setTheme(createTheme());
-  }, []); // Empty dependency array ensures this effect runs only once
+  const validateForm = (event) => {
+    let errorMessage = '';
+    const data = new FormData(event.currentTarget);
+    // get the email
+    let email = data.get('email');
+    // pull in the validator
+    var validator = require("email-validator");
+    // run the validator
+    let emailCheck = validator.validate(email);
+    // if it is false, add to the error message.
+    if (!emailCheck) {
+      errorMessage += 'No e-mail';
+    }
+    return errorMessage;
+  }
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
-      dob: data.get('dob'),
-      
-    });
-    runDBCallAsync(`api/register?email=${data.get('email')}&pass=${data.get('password')}&dob=${data.get('dob')}`)
-    };
+    // call our custom validator
+    let errorMessage = validateForm(event);
+    // save the message
+    setErrorHolder(errorMessage);
+    // if we have an error
+    if (errorMessage.length > 0) {
+      setOpen(true);
+    } else {
+      // if we do not get an error
+      const data = new FormData(event.currentTarget);
+      let email = data.get('email');
+      let pass = data.get('password');
+      let dob = data.get('dob');
+      console.log("Sent email:" + email);
+      console.log("Sent pass:" + pass);
+      console.log("Sent dob:" + dob);
+      console.log("calling db");
+      runDBCallAsync(`api/register?email=${email}&pass=${pass}&dob=${dob}`);
+    }
+  };
 
-  // Render the component only when the theme is available
-  if (!theme) {
-    return null;
-  }
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
 
   return (
     <ThemeProvider theme={theme}>
+      <React.Fragment>
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">
+            {"Error"}
+          </DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              {errorHolder}
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose} autoFocus>
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </React.Fragment>
       <Container component="main" maxWidth="xs">
         <CssBaseline />
         <Box
@@ -81,7 +136,7 @@ export default function SignIn() {
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Sign in
+            Register
           </Typography>
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
             <TextField
@@ -109,7 +164,7 @@ export default function SignIn() {
               required
               fullWidth
               name="dob"
-              label="dob"
+              label="Date of Birth"
               type="text"
               id="dob"
               autoComplete=""

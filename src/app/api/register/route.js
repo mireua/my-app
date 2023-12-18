@@ -13,6 +13,10 @@ export async function GET(req, res) {
     console.log(pass);
     console.log(dob);
 
+    const bcrypt = require('bcrypt');
+    const saltRounds = 10;
+    const hash = bcrypt.hashSync(pass, saltRounds);
+
     // =================================================
     const { MongoClient } = require('mongodb');
     const url = 'mongodb+srv://samuelmuan:T4yzGVayKT7a9Bte@cluster0.giwsfqt.mongodb.net/?retryWrites=true&w=majority';
@@ -24,7 +28,7 @@ export async function GET(req, res) {
 
     const db = client.db(dbName);
     const collection = db.collection('login'); // collection name
-    const findResult = await collection.insertOne({"username": email, "pass": pass, "dob": dob});
+    const findResult = await collection.insertOne({"username": email, "pass": hash, "dob": dob});
     let valid = true;
 
     //==========================================================
